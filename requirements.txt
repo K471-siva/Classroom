@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+jinja2
+python-multipart
+python-dotenv
+groq
+python-telegram-bot
+requests
+websockets
+passlib
+bcrypt
+itsdangerous

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div>
+            <div class="logo">Student</div>
+
+            <!-- PROFILE -->
+            <div class="glass-card profile-card">
+                <label for="profileUpload">
+                    {% if profile_image %}
+                        <img src="/{{ profile_image }}" class="profile-avatar">
+                    {% else %}
+                        <div class="profile-letter">{{ name[0]|upper }}</div>
+                    {% endif %}
+                </label>
+                <input type="file" id="profileUpload" accept="image/*" hidden onchange="previewProfile(event)">
+                <h3>{{ name }}</h3>
+                <p>Student Dashboard</p>
+            </div>
+
+            <!-- MENU -->
+            <div class="menu">
+                <a href="#overview">Overview</a>
+                <a href="#assignments">Assignments</a>
+                <a href="#submissions">Submissions</a>
+                <a href="#ai">AI Tutor</a>
+                <a href="#analytics">Analytics</a>
+            </div>
+        </div>
+
+        <a href="/logout">Logout</a>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+        {% if success %}
+        <div class="success-msg">{{ success }}</div>
+        {% endif %}
+
+        <!-- TOP -->
+        <div class="top">
+            <h1>Welcome, {{ name }}</h1>
+        </div>
+
+        <!-- OVERVIEW CARDS -->
+        <div class="cards" id="overview">
+            <div class="card">
+                <h2>{{ total_assignments }}</h2>
+                <p>Total Assignments</p>
+            </div>
+            <div class="card">
+                <h2>{{ pending }}</h2>
+                <p>Pending Assignments</p>
+            </div>
+            <div class="card">
+                <h2>{{ submissions|default([])|length }}</h2>
+                <p>Total Submissions</p>
+            </div>
+        </div>
+
+        <!-- MY ASSIGNMENTS (collapsible) -->
+        <div class="section" id="assignments">
+            <div class="collapse-header" onclick="toggleCollapse('myAssignmentsPanel', this.querySelector('.collapse-toggle'))">
+                <h2>
+                    My Assignments
+                    <span class="section-count">{{ assignments|default([])|length }}</span>
+                </h2>
+                <button type="button" class="collapse-toggle">−</button>
+            </div>
+
+            <div id="myAssignmentsPanel" class="collapse-body scroll-list">
+                {% if assignments %}
+                    {% for assignment in assignments %}
+                    <div class="assignment">
+                        <div>
+                            <strong>ID: {{ assignment[0] }}</strong>
+                            <br>
+                            📚 {{ assignment[2] }}
+                            ⏰ Deadline: {{ assignment[3] }}
+                        </div>
+                        <div>
+                            {% set st = assignment[4] %}
+                            {% if st == "Completed" or st == "Reviewed" %}
+                                <span class="badge badge-completed">✅ {{ st }}</span>
+                            {% elif st == "Submitted" %}
+                                <span class="badge badge-submitted">📤 Submitted</span>
+                            {% elif st == "In Progress" %}
+                                <span class="badge badge-inprogress">✍️ In Progress</span>
+                            {% elif st == "Needs Help" %}
+                                <span class="badge badge-help">🆘 Needs Help</span>
+                            {% else %}
+                                <span class="badge badge-pending">🕒 Pending</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <span class="emoji">📭</span>
+                        No assignments yet.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- SUBMIT HOMEWORK -->
+        <div class="section" id="submissions">
+            <h2>Submit Homework</h2>
+
+            <form action="/submit-homework" method="post" enctype="multipart/form-data" id="homeworkForm">
+                <input type="number" name="assignment_id" placeholder="Assignment ID" required>
+                <small>Enter the Assignment ID shown by your teacher.</small>
+                <input type="hidden" name="student" value="{{ name }}">
+                <input type="file" name="file" required>
+                <button type="submit">Upload Homework</button>
+            </form>
+        </div>
+
+        <!-- SUBMISSION HISTORY (collapsible) -->
+        <div class="section">
+            <div class="collapse-header" onclick="toggleCollapse('submissionHistoryPanel', this.querySelector('.collapse-toggle'))">
+                <h2>
+                    Submission History
+                    <span class="section-count">{{ submissions|default([])|length }}</span>
+                </h2>
+                <button type="button" class="collapse-toggle">−</button>
+            </div>
+
+            <div id="submissionHistoryPanel" class="collapse-body scroll-list">
+                {% if submissions %}
+                    {% for submission in submissions %}
+                    <div class="submission-card">
+                        <div>
+                            {% set fp = submission[3] %}
+                            {% if fp and fp not in ("telegram-text", "") %}
+                                📄
+                                <a href="/{{ fp }}" target="_blank" rel="noopener" class="file-link">
+                                    {{ fp.split('/')[-1].split('\\')[-1] }}
+                                </a>
+                                <a href="/{{ fp }}" download class="download-btn">⬇ Download</a>
+                            {% elif submission[6] %}
+                                📝 Text submission
+                            {% else %}
+                                📄 {{ fp }}
+                            {% endif %}
+
+                            {% if submission[6] %}
+                            <br>
+                            <span class="submission-text">"{{ submission[6] }}"</span>
+                            {% endif %}
+
+                            <br>
+                            💬 {{ submission[4] }}
+                        </div>
+                        <div>
+                            {% if submission[5] == "Reviewed" %}
+                                <span class="badge badge-completed">Reviewed</span>
+                            {% else %}
+                                <span class="badge badge-pending">Pending</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <span class="emoji">📭</span>
+                        No submissions yet.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- AI TUTOR -->
+        <div class="section" id="ai">
+            <h2>AI Classroom Assistant</h2>
+
+            <div class="chat" id="chatBox">
+                <div class="ai-msg">
+                    👋 Hello {{ name }}! Ask me any subject doubt — Math, Science, English, or homework help.
+                </div>
+            </div>
+
+            <form id="aiForm" onsubmit="return false;">
+                <input type="hidden" id="studentName" value="{{ name }}">
+                <input type="text" id="question" placeholder="Ask Math, Science, English or Homework doubts..." required>
+                <button type="button" onclick="sendAIMessage()">Ask AI</button>
+            </form>
+        </div>
+
+        <!-- PERFORMANCE ANALYTICS -->
+        <div class="section" id="analytics">
+            <h2>Performance Analytics</h2>
+
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3>Marks</h3>
+                    <div class="small-chart">
+                        <canvas id="marksChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Assignment Status</h3>
+                    <div class="small-chart">
+                        <canvas id="assignmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /content -->
+
+</div><!-- /main -->
+
+<script>
+const studentName = "{{ name }}";
+
+// MARKS CHART
+fetch(`/marks-chart/${studentName}`)
+    .then(response => response.json())
+    .then(data => {
+        new Chart(document.getElementById("marksChart"), {
+            type: "bar",
+            data: {
+                labels: data.subjects,
+                datasets: [{
+                    label: "Marks",
+                    data: data.scores,
+                    backgroundColor: "rgba(37, 99, 235, 0.7)",
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    })
+    .catch(error => console.log(error));
+
+// ASSIGNMENT CHART
+fetch(`/assignment-chart/${studentName}`)
+    .then(response => response.json())
+    .then(data => {
+        new Chart(document.getElementById("assignmentChart"), {
+            type: "doughnut",
+            data: {
+                labels: ["Completed", "Submitted", "Pending"],
+                datasets: [{
+                    data: [data.completed, data.submitted, data.pending],
+                    backgroundColor: ["#10b981", "#8b5cf6", "#f59e0b"],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: { color: "#334155", padding: 14, font: { size: 12 } }
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => console.log(error));
+
+// AI CHATBOT
+async function sendAIMessage(){
+    const question = document.getElementById("question").value;
+    const student = document.getElementById("studentName").value;
+    if(!question){ return; }
+
+    const chatBox = document.getElementById("chatBox");
+
+    // USER MESSAGE
+    chatBox.innerHTML += '<div class="user-msg">' + question + '</div>';
+    document.getElementById("question").value = "";
+
+    // LOADING
+    const loading = document.createElement("div");
+    loading.className = "ai-msg";
+    loading.innerHTML = '<span class="spinner"></span> Thinking...';
+    chatBox.appendChild(loading);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // FORM DATA
+    const formData = new FormData();
+    formData.append("message", question);
+    formData.append("student", student);
+
+    try {
+        const response = await fetch("/ask-ai", { method: "POST", body: formData });
+        const data = await response.json();
+        loading.remove();
+        chatBox.innerHTML += '<div class="ai-msg">🤖 ' + (data.response || data.error || "AI unavailable") + '</div>';
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } catch(error) {
+        console.log(error);
+        loading.remove();
+        chatBox.innerHTML += '<div class="ai-msg">❌ AI service unavailable</div>';
+    }
+}
+</script>
+
+<script src="/static/websocket.js"></script>
+
+<script>
+document.getElementById("question").addEventListener("keypress", function(event){
+    if(event.key === "Enter"){
+        event.preventDefault();
+        sendAIMessage();
+    }
+});
+</script>
+
+<script>
+function previewProfile(event){
+    const file = event.target.files[0];
+    if(!file){ return; }
+    const reader = new FileReader();
+    reader.onload = function(){
+        let avatar = document.querySelector(".profile-avatar");
+        if(!avatar){
+            const letter = document.querySelector(".profile-letter");
+            avatar = document.createElement("img");
+            avatar.className = "profile-avatar";
+            if(letter){ letter.replaceWith(avatar); }
+        }
+        avatar.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+}
+</script>
+
+</body>
+</html>

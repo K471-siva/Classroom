@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div>
+            <div class="logo">Teacher</div>
+
+            <!-- PROFILE -->
+            <div class="glass-card profile-card">
+                <label for="profileUpload">
+                    {% if profile_image %}
+                        <img src="/{{ profile_image }}" class="profile-avatar">
+                    {% else %}
+                        <div class="profile-letter">{{ name[0]|upper }}</div>
+                    {% endif %}
+                </label>
+                <input type="file" id="profileUpload" accept="image/*" hidden onchange="previewProfile(event)">
+                <h3>{{ name }}</h3>
+                <p>Teacher Dashboard</p>
+            </div>
+
+            <!-- MENU -->
+            <div class="menu">
+                <a href="#overview">Overview</a>
+                <a href="#students">Students</a>
+                <a href="#assignments">Assignments</a>
+                <a href="#submissions">Submissions</a>
+            </div>
+        </div>
+
+        <a href="/logout">Logout</a>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="content">
+
+        {% if success %}
+        <div class="success-msg">{{ success }}</div>
+        {% endif %}
+
+        {% if error %}
+        <div class="error-msg">{{ error }}</div>
+        {% endif %}
+
+        <!-- TOP -->
+        <div class="top">
+            <h1>Welcome, {{ name }}</h1>
+        </div>
+
+        <!-- OVERVIEW CARDS -->
+        <div class="cards" id="overview">
+            <div class="card">
+                <h2>{{ total_assignments }}</h2>
+                <p>Total Assignments</p>
+            </div>
+            <div class="card">
+                <h2>{{ total_students }}</h2>
+                <p>Total Students</p>
+            </div>
+            <div class="card">
+                <h2>{{ submissions|default([])|length }}</h2>
+                <p>Total Submissions</p>
+            </div>
+        </div>
+
+        <!-- CLASS OVERVIEW CHART -->
+        <div class="section">
+            <h2>Class Assignment Overview</h2>
+
+            {% if assignments %}
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3>Status Distribution</h3>
+                    <div class="small-chart">
+                        <canvas id="classStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <span class="emoji">📚</span>
+                No assignments yet — create one below to see the breakdown.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- STUDENT INVITE LINKS -->
+        <div class="section" id="students">
+            <h2>Student Invite Links</h2>
+
+            <p>Share an invite link with a student. They open it, register their details, and get linked to you automatically.</p>
+
+            {% if group_invite_link %}
+            <p>After linking, students receive your Telegram group invite automatically.</p>
+            {% endif %}
+
+            <form action="/onboard-student" method="post">
+                <input type="text" name="student" placeholder="Optional student name for this invite" required>
+                <button type="submit">Create Invite Link</button>
+            </form>
+
+            <div class="invite-grid">
+                {% for student in students %}
+                <div class="invite-card">
+                    <div class="invite-head">
+                        <strong>{{ student[0] if student[0] else "Open Slot" }}</strong>
+                        {% if student[2] == "linked" %}
+                            <span class="badge badge-completed">Registered</span>
+                        {% else %}
+                            <span class="badge badge-pending">Awaiting</span>
+                        {% endif %}
+                    </div>
+                    <div class="invite-link-row">
+                        <input type="text" class="invite-link-field" id="invite-{{ student[1] }}" value="/invite/{{ student[1] }}" data-path="/invite/{{ student[1] }}" readonly>
+                        {% if student[2] != "linked" %}
+                        <button type="button" class="copy-btn" onclick="copyInvite('invite-{{ student[1] }}')">Copy</button>
+                        {% endif %}
+                    </div>
+                    {% if student[2] == "linked" %}
+                    <form action="/remove-student" method="post">
+                        <input type="hidden" name="student" value="{{ student[0] }}">
+                        <button type="submit" class="remove-btn">Remove</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <h3>Logged-in Students: {{ total_students }}</h3>
+
+            {% if linked_students %}
+                {% for student in linked_students %}
+                <div class="assignment">
+                    <div>
+                        <strong>{{ student[0] }}</strong>
+                        <br>
+                        <span class="badge badge-completed">Registered</span>
+                    </div>
+                    <div>
+                        <form action="/remove-student" method="post">
+                            <input type="hidden" name="student" value="{{ student[0] }}">
+                            <button type="submit" class="remove-btn">Remove</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p>No students have linked yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- CREATE ASSIGNMENT -->
+        <div class="section" id="assignments">
+            <h2>Create Assignment</h2>
+
+            {% if linked_students %}
+            <p>You can write the task in plain English on Telegram too — e.g. "Assign Riya a 500-word essay, due in 3 days".</p>
+
+            <form action="/assign" method="post">
+                <select name="student" required>
+                    <option value="" disabled selected>Select a registered student</option>
+                    {% for student in linked_students %}
+                    <option value="{{ student[0] }}">{{ student[0] }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="task" placeholder="Homework Task" required>
+                <input type="date" name="deadline" required>
+                <button type="submit">Assign Homework</button>
+            </form>
+            {% else %}
+            <div class="empty-state">
+                <span class="emoji">🔗</span>
+                No students have registered yet. Share an invite link above — once a student registers, you can assign them work here.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ASSIGNMENT LIST (collapsible) -->
+        <div class="section">
+            <div class="collapse-header" onclick="toggleCollapse('assignmentListPanel', this.querySelector('.collapse-toggle'))">
+                <h2>
+                    Assignment List
+                    <span class="section-count">{{ assignments|default([])|length }}</span>
+                </h2>
+                <button type="button" class="collapse-toggle">−</button>
+            </div>
+
+            <div id="assignmentListPanel" class="collapse-body scroll-list">
+                {% if assignments %}
+                    {% for assignment in assignments %}
+                    <div class="assignment">
+                        <div>
+                            <strong>👤 {{ assignment[1] }}</strong>
+                            <br>
+                            📚 {{ assignment[2] }}
+                            <br>
+                            ⏰ {{ assignment[3] }}
+                        </div>
+                        <div>
+                            {% set st = assignment[4] %}
+                            {% if st == "Completed" or st == "Reviewed" %}
+                                <span class="badge badge-completed">✅ {{ st }}</span>
+                            {% elif st == "Pending" %}
+                                <span class="badge badge-pending">🕒 {{ st }}</span>
+                            {% elif st == "In Progress" %}
+                                <span class="badge badge-inprogress">✍️ {{ st }}</span>
+                            {% elif st == "Needs Help" %}
+                                <span class="badge badge-help">🆘 {{ st }}</span>
+                            {% elif st == "Submitted" %}
+                                <span class="badge badge-submitted">📤 {{ st }}</span>
+                            {% else %}
+                                <span class="badge badge-review">{{ st }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No assignments available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- PROGRESS UPDATES -->
+        <div class="section">
+            <h2>Student Progress Updates</h2>
+
+            {% if progress_updates %}
+                {% for progress in progress_updates %}
+                <div class="assignment">
+                    <div>
+                        <strong>{{ progress[2] }}</strong>
+                        <br>
+                        {{ progress[3] }}
+                        <br>
+                        {{ progress[5] }}
+                    </div>
+                    <div>
+                        <span class="badge badge-review">{{ progress[4] }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p>No progress updates yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- AI PERFORMANCE ANALYSIS -->
+        <div class="section">
+            <h2>AI Student Analysis</h2>
+
+            <div class="analysis-box">
+                <input type="text" id="analysisStudent" placeholder="Enter Student Name">
+                <button onclick="analyzeStudent()">Analyze Student</button>
+            </div>
+
+            <div id="analysisResult" class="analysis-result">
+                Enter student name and click Analyze.
+            </div>
+        </div>
+
+        <!-- SUBMISSIONS (collapsible) -->
+        <div class="section" id="submissions">
+            <div class="collapse-header" onclick="toggleCollapse('submissionPanel', this.querySelector('.collapse-toggle'))">
+                <h2>
+                    Student Submissions
+                    <span class="section-count">{{ submissions|default([])|length }}</span>
+                </h2>
+                <button type="button" class="collapse-toggle">−</button>
+            </div>
+
+            <div id="submissionPanel" class="collapse-body scroll-list">
+                {% if submissions %}
+                    {% for submission in submissions %}
+                    <div class="submission-card">
+                        <div>
+                            <strong>👤 {{ submission[2] }}</strong>
+                            <br>
+                            {% set fp = submission[3] %}
+                            {% if fp and fp not in ("telegram-text", "") %}
+                                📄
+                                <a href="/{{ fp }}" target="_blank" rel="noopener" class="file-link">
+                                    {{ fp.split('/')[-1].split('\\')[-1] }}
+                                </a>
+                                <a href="/{{ fp }}" download class="download-btn">⬇ Download</a>
+                            {% elif submission[6] %}
+                                📝 Text submission
+                            {% else %}
+                                📄 {{ fp }}
+                            {% endif %}
+
+                            {% if submission[6] %}
+                            <br>
+                            <span class="submission-text">"{{ submission[6] }}"</span>
+                            {% endif %}
+
+                            <br>
+                            💬 {{ submission[4] }}
+                        </div>
+                        <div>
+                            {% if submission[5] == "Reviewed" %}
+                                <span class="badge badge-completed">Reviewed</span>
+                            {% else %}
+                                <span class="badge badge-pending">Pending</span>
+                            {% endif %}
+
+                            <form action="/review-submission" method="post" style="margin-top:10px;">
+                                <input type="hidden" name="submission_id" value="{{ submission[0] }}">
+                                <input type="text" name="feedback" placeholder="Enter Feedback" required>
+                                <button type="submit">Review</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No submissions yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+    </div><!-- /content -->
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+
+        <!-- ACTIVITY FEED -->
+        <div class="glass-card">
+            <h3>📈 Activity Feed</h3>
+            {% if progress_updates %}
+                {% for progress in progress_updates[:6] %}
+                <div class="activity-item">
+                    <span class="status-dot
+                        {% if progress[4] == 'Submitted' %}dot-submitted
+                        {% elif progress[4] == 'Needs Help' %}dot-help
+                        {% elif progress[4] == 'In Progress' %}dot-inprogress
+                        {% else %}dot-pending{% endif %}"></span>
+                    <div>
+                        <strong>{{ progress[2] }}</strong>: {{ progress[3] }}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <span class="emoji">📭</span>
+                    No activity yet.
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div class="glass-card">
+            <h3>🔔 Notifications</h3>
+            {% set pending_count = assignments | selectattr('4', 'equalto', 'Pending') | list | length %}
+            {% set help_count = progress_updates | selectattr('4', 'equalto', 'Needs Help') | list | length %}
+            {% set unreviewed = submissions | rejectattr('5', 'equalto', 'Reviewed') | list | length %}
+            <p>📚 {{ pending_count }} assignment(s) pending</p>
+            <p>🆘 {{ help_count }} student(s) need help</p>
+            <p>📥 {{ unreviewed }} submission(s) awaiting review</p>
+        </div>
+    </div>
+
+</div><!-- /main -->
+
+<script>
+// INVITE LINKS
+document.querySelectorAll(".invite-link-field").forEach(function(field){
+    const path = field.getAttribute("data-path");
+    field.value = window.location.origin + path;
+});
+
+function copyInvite(fieldId){
+    const field = document.getElementById(fieldId);
+    if(!field){ return; }
+    field.select();
+    field.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(field.value).then(function(){
+        if(window.showToast){
+            window.showToast("Invite link copied!");
+        }
+    }).catch(function(){
+        document.execCommand("copy");
+    });
+}
+
+// CLASS STATUS DONUT
+{% if assignments %}
+(function(){
+    const counts = {
+        Pending: {{ assignments | selectattr('4','equalto','Pending') | list | length }},
+        "In Progress": {{ assignments | selectattr('4','equalto','In Progress') | list | length }},
+        "Needs Help": {{ assignments | selectattr('4','equalto','Needs Help') | list | length }},
+        Submitted: {{ assignments | selectattr('4','equalto','Submitted') | list | length }},
+        Completed: {{ (assignments | selectattr('4','equalto','Completed') | list | length) + (assignments | selectattr('4','equalto','Reviewed') | list | length) }}
+    };
+    const el = document.getElementById("classStatusChart");
+    if(el && window.Chart){
+        new Chart(el, {
+            type: "doughnut",
+            data: {
+                labels: Object.keys(counts),
+                datasets: [{
+                    data: Object.values(counts),
+                    backgroundColor: ["#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6", "#10b981"],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: { color: "#334155", padding: 14, font: { size: 12 } }
+                    }
+                }
+            }
+        });
+    }
+})();
+{% endif %}
+
+// AI ANALYSIS
+async function analyzeStudent(){
+    const student = document.getElementById("analysisStudent").value;
+    if(!student){ return; }
+    const formData = new FormData();
+    formData.append("student", student);
+    const response = await fetch("/student-summary", { method: "POST", body: formData });
+    const data = await response.json();
+    document.getElementById("analysisResult").innerHTML =
+        '<div class="ai-analysis">' + data.summary + '</div>';
+}
+</script>
+
+<script src="/static/websocket.js"></script>
+
+<script>
+function previewProfile(event){
+    const file = event.target.files[0];
+    if(!file){ return; }
+    const reader = new FileReader();
+    reader.onload = function(){
+        let avatar = document.querySelector(".profile-avatar");
+        if(!avatar){
+            const letter = document.querySelector(".profile-letter");
+            avatar = document.createElement("img");
+            avatar.className = "profile-avatar";
+            if(letter){ letter.replaceWith(avatar); }
+        }
+        avatar.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+}
+</script>
+
+</body>
+</html>

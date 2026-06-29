@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invite Registration</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="split-container">
+        <div class="split-left">
+            <div class="form-wrapper">
+                <span class="brand-tag">Student Registration</span>
+                <h1>Join Class</h1>
+                <p class="subtitle">Complete your details to get access to your assignments and start learning.</p>
+
+                {% if invite_error %}
+                <div class="error-msg">{{ invite_error }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="split-right">
+            <div class="neon-circle"></div>
+            <div class="neon-square"></div>
+            <div class="neon-triangle"></div>
+            <div class="illustration">
+                <div class="content-layer">
+                    <h2>Welcome to the Classroom</h2>
+                    <p>Register with your teacher's invite link to get started. Once linked, you'll receive assignments, submit work, and get AI-powered feedback.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form is separate because it needs to be full-page when invite is valid -->
+    {% if not invite_error %}
+    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:100;">
+        <div style="background:var(--surface);border-radius:var(--radius);padding:36px;max-width:440px;width:90%;box-shadow:var(--shadow-lg);">
+            <span class="brand-tag">Student Details</span>
+            <h2 style="margin-bottom:16px;">Register & Link</h2>
+
+            {% if success %}
+            <div class="success-msg">{{ success }}</div>
+            {% endif %}
+
+            {% if error %}
+            <div class="error-msg">{{ error }}</div>
+            {% endif %}
+
+            <form action="/invite/{{ invite_code }}/register" method="post" class="auth-form">
+                <div class="field-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your full name" required value="{{ name|default('') }}">
+                </div>
+                <div class="field-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Choose a username (for web login)" required value="{{ username|default('') }}">
+                </div>
+                <div class="field-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Create a password" required>
+                </div>
+                <input type="hidden" name="student_name" value="{{ student_name|default('') }}">
+
+                <button type="submit" class="btn-primary">Register & Link</button>
+            </form>
+
+            <p class="switch-link">
+                Already registered? <a href="/login">Login</a>
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>

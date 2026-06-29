@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="split-container">
+        <div class="split-left">
+            <div class="form-wrapper">
+                <span class="brand-tag">Classroom</span>
+                <h1>Welcome Back</h1>
+                <p class="subtitle">Sign in to access your dashboard and manage your classroom with AI assistance.</p>
+
+                {% if error %}
+                <div class="error-msg">{{ error }}</div>
+                {% endif %}
+
+                {% if success %}
+                <div class="success-msg">{{ success }}</div>
+                {% endif %}
+
+                <form action="/login" method="post" class="auth-form">
+                    <div class="field-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                    </div>
+                    <div class="field-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Login</button>
+                </form>
+
+                <p class="switch-link">
+                    New user? <a href="/register">Create a teacher account</a>
+                    <br>
+                    Student? Use your teacher's invite link to register.
+                </p>
+            </div>
+        </div>
+
+        <div class="split-right">
+            <div class="neon-circle"></div>
+            <div class="neon-square"></div>
+            <div class="neon-triangle"></div>
+            <div class="illustration">
+                <div class="content-layer">
+                    <h2>AI Classroom Companion</h2>
+                    <p>Teachers assign work in natural language. Students reply with progress, submit files, and receive friendly feedback &mdash; all through a simple chat interface powered by AI.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

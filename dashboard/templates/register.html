@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="split-container">
+        <div class="split-left">
+            <div class="form-wrapper">
+                <span class="brand-tag">Teacher Onboarding</span>
+                <h1>Create Account</h1>
+                <p class="subtitle">Register as a teacher to start managing your classroom with AI-powered tools.</p>
+
+                {% if success %}
+                <div class="success-msg">{{ success }}</div>
+                {% endif %}
+
+                {% if error %}
+                <div class="error-msg">{{ error }}</div>
+                {% endif %}
+
+                <form action="/register" method="post" class="auth-form">
+                    <div class="field-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="field-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" placeholder="Choose a username" required>
+                    </div>
+                    <div class="field-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Create a password" required>
+                    </div>
+                    <input type="hidden" name="role" value="teacher">
+
+                    <button type="submit" class="btn-primary">Register</button>
+                </form>
+
+                <p class="switch-link">
+                    Already have an account? <a href="/login">Login</a>
+                </p>
+            </div>
+        </div>
+
+        <div class="split-right">
+            <div class="neon-circle"></div>
+            <div class="neon-square"></div>
+            <div class="neon-triangle"></div>
+            <div class="illustration">
+                <div class="content-layer">
+                    <h2>Invite-Based Classrooms</h2>
+                    <p>Create a teacher account, generate invite links, and only linked students can receive assignments. Students register through your unique invite link &mdash; keeping your classroom secure and organized.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
